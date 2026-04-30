@@ -6,7 +6,7 @@ API_KEY = "AIzaSyCag1FU7gbaMCkk1aJLxuaT03og9cDSBHU"
 genai.configure(api_key=API_KEY)
 
 # 2. Gemini 모델 설정 (1.5 Flash 모델 사용)
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+model = genai.GenerativeModel('gemini-pro')
 
 # 3. 웹앱 화면 꾸미기
 st.set_page_config(page_title="AI 맞춤법 선생님", page_icon="✍️")
