@@ -5,8 +5,8 @@ import google.generativeai as genai
 API_KEY = "AIzaSyCag1FU7gbaMCkk1aJLxuaT03og9cDSBHU"
 genai.configure(api_key=API_KEY)
 
-# 최신 방식: 모델을 지정할 때 버전 오류가 안 나게 모델명만 깔끔하게 넣습니다.
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 수정 포인트: 모델 이름을 'models/gemini-1.5-flash'로 더 정확하게 부릅니다.
+model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
 
 st.set_page_config(page_title="AI 맞춤법 선생님")
 st.title("✍️ AI 맞춤법 & 띄어쓰기 교정기")
@@ -17,10 +17,10 @@ if st.button("AI 선생님에게 검사받기 ✨"):
     if user_input.strip():
         with st.spinner('분석 중...'):
             try:
-                # 여기서 에러가 안 나게 가장 기본적인 호출을 사용합니다.
-                response = model.generate_content(f"다음 문장의 맞춤법을 고치고 이유를 설명해줘: {user_input}")
+                # 안전한 호출 방식
+                response = model.generate_content(f"다음 문장을 고쳐줘: {user_input}")
                 st.success("완료!")
                 st.markdown(response.text)
             except Exception as e:
-                # 에러 메시지가 너무 길면 보기 싫으니 핵심만 띄웁니다.
-                st.error(f"오류가 발생했습니다. API 키나 모델 설정을 확인해주세요. ({e})")
+                # 에러 내용을 더 구체적으로 찍어서 범인을 잡아봅시다.
+                st.error(f"오류 내용: {e}")
