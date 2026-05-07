@@ -1,66 +1,60 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. 페이지 기본 설정
-st.set_page_config(page_title="AI 맞춤법 선생님", page_icon="✍️", layout="wide")
+# 1. 페이지 설정
+st.set_page_config(page_title="AI 맞춤법 선생님", page_icon="✍️")
 
-# 2. 사이드바: API 키 입력창 생성
+# 2. 사이드바: API 키 입력
 with st.sidebar:
-    st.title("🔑 보안 설정")
-    # type="password"로 설정하면 입력할 때 별표(***)로 표시되어 안전합니다.
+    st.title("🔑 설정")
     user_api_key = st.text_input("Gemini API Key를 입력하세요", type="password")
-    
-    st.markdown("---")
-    st.markdown("""
-    **사용 방법:**
-    1. [Google AI Studio](https://aistudio.google.com/app/apikey) 접속
-    2. API Key 발급 (무료)
-    3. 위 칸에 복사/붙여넣기
-    """)
-    st.caption("v1.0 - 키는 어디에도 저장되지 않고 세션 중에만 유지됩니다.")
+    st.info("키 발급: [Google AI Studio](https://aistudio.google.com/app/apikey)")
 
-# 3. 메인 화면 UI
 st.title("✍️ AI 맞춤법 & 띄어쓰기 교정기")
-st.write("문장을 입력하면 AI가 맞춤법과 띄어쓰기를 완벽하게 교정해 드립니다.")
 
-# 4. 핵심 로직
-if user_api_key:
-    # 사용자가 키를 입력했을 때만 실행
+# 3. 모델 로드 함수 (404 에러 방지 로직)
+def get_working_model(api_key):
     try:
-        genai.configure(api_key=user_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        genai.configure(api_key=api_key)
+        # 내 계정에서 사용 가능한 모델 리스트 확인
+        models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # 선호하는 순서대로 모델 선택
+        if 'models/gemini-1.5-flash' in models:
+            return genai.GenerativeModel('gemini-1.5-flash'), 'gemini-1.5-flash'
+        elif 'models/gemini-pro' in models:
+            return genai.GenerativeModel('gemini-pro'), 'gemini-pro'
+        else:
+            # 리스트 중 첫 번째 모델 선택
+            return genai.GenerativeModel(models[0]), models[0]
+    except Exception as e:
+        return None, str(e)
 
-        user_input = st.text_area(
-            "교정받을 문장을 입력하세요:", 
-            placeholder="예: 오늘 날씨 가 참좋내요 점심 머먹 을까요?",
-            height=200
-        )
+# 4. 메인 로직
+if user_api_key:
+    model, model_name = get_working_model(user_api_key)
+    
+    if model:
+        st.caption(f"현재 연결된 모델: {model_name}")
+        user_input = st.text_area("교정받을 문장을 입력하세요:", placeholder="예: 오늘 날씨 가 참좋내요 점심 머먹 을까요?", height=200)
 
         if st.button("AI 선생님에게 검사받기 ✨"):
             if user_input.strip():
-                with st.spinner('AI가 열심히 문장을 읽고 있습니다...'):
-                    # 프롬프트를 구체적으로 작성하여 결과 품질을 높임
-                    prompt = (
-                        f"너는 전문 한국어 교열 작가야. 다음 문장의 맞춤법과 띄어쓰기를 교정해줘.\n"
-                        f"결과는 '교정된 문장'과 '수정된 부분들에 대한 간단한 설명'을 포함해서 보기 좋게 출력해줘.\n\n"
-                        f"입력 문장: {user_input}"
-                    )
-                    
-                    response = model.generate_content(prompt)
-                    
-                    st.success("분석을 완료했습니다!")
-                    st.subheader("✅ 교정 결과")
-                    st.info(response.text)
+                with st.spinner('분석 중...'):
+                    try:
+                        prompt = f"너는 전문 교열 작가야. 다음 문장의 맞춤법과 띄어쓰기를 교정해줘. 결과는 '교정 문장'과 '설명'으로 나눠서 보여줘.\n\n문장: {user_input}"
+                        response = model.generate_content(prompt)
+                        
+                        st.success("검사 완료!")
+                        st.divider()
+                        st.markdown(response.text)
+                    except Exception as e:
+                        st.error(f"분석 중 오류가 발생했습니다: {e}")
             else:
-                st.warning("교정할 문장을 먼저 입력해 주세요.")
-
-    except Exception as e:
-        # 키가 잘못되었거나 서버 오류가 날 경우 처리
-        st.error(f"오류가 발생했습니다: {e}")
-        st.info("입력하신 API 키가 정확한지 다시 확인해 보세요.")
+                st.warning("문장을 입력해주세요.")
+    else:
+        st.error(f"모델을 불러오지 못했습니다. API 키를 확인해주세요. (상세: {model_name})")
 
 else:
-    # 사용자가 키를 입력하지 않았을 때 보여줄 화면
     st.divider()
-    st.warning("⚠️ 시작하기 전에 왼쪽 사이드바에 API 키를 입력해 주세요.")
-    st.image("https://images.unsplash.com/photo-1455390582262-044cdead277a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80", caption="글쓰기를 도와주는 AI")
+    st.warning("👈 시작하려면 왼쪽 사이드바에 API 키를 입력해 주세요.")
